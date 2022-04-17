@@ -23,54 +23,55 @@
 
 typedef KERNEL_TYPE convolution_kernel_t;
 typedef IMAGE_TYPE input_t;
-__kernel void convolve(__global input_t *img, __global convolution_kernel_t *res, __constant convolution_kernel_t *krn, int sz0, int sz1, int krnsz, int numkrn, int numimg)
+
+__kernel void convolve(__global input_t *img, __global convolution_kernel_t *res, __constant convolution_kernel_t *kernel_array, int size0, int size1, int kernel_array_size)
 {
-    //printf(""print_macro(IMAGE_TYPE)" ");
-    int wid0=get_group_id(0), wid1=get_group_id(1);
-    int lid0=get_local_id(0), lid1=get_local_id(1);
-    int gid0=get_global_id(0), gid1=get_global_id(1);
+    int gid0 = get_global_id(0), gid1 = get_global_id(1);
 
     convolution_kernel_t tmp,sum;
 
-    __local convolution_kernel_t locsum;
-    int hfs=krnsz/2;
-    int addr0, addr1;
+    int hfs = kernel_array_size/2;
+    int address0, address1;
 
-    __local input_t cached[PATCH_SIZE*PATCH_SIZE];
+    __local input_t cached[PATCH_SIZE * PATCH_SIZE];
 
-    int iimg=get_group_id(2);
-    for(int imaddr0=0;imaddr0<PATCH_SIZE;imaddr0++)
+    int image_index = get_group_id(2);
+    for(int image_address0 = 0; image_address0 < PATCH_SIZE; image_address0++)
     {
-        for(int imaddr1=0;imaddr1<PATCH_SIZE;imaddr1++)
+        for(int image_address1 = 0; image_address1 < PATCH_SIZE; image_address1++)
         {
-            addr0=gid0*(PATCH_SIZE-krnsz)-hfs+imaddr0;
-            if(addr0<0)addr0+=sz0;
-            else if(addr0>sz0)addr0-=sz0;
-            addr1=gid1*(PATCH_SIZE-krnsz)-hfs+imaddr1;
-            if(addr1<0)addr1+=sz1;
-            else if(addr1>sz1)addr1-=sz1;
-            cached[imaddr0*PATCH_SIZE+imaddr1]=img[iimg*sz0*sz1+addr0*sz1+addr1];
+            address0 = gid0 * (PATCH_SIZE - kernel_array_size) - hfs + image_address0;
+            if (address0 < 0)
+                address0 += size0;
+            else if (address0 > size0)
+                address0 -= size0;
+            address1 = gid1 * (PATCH_SIZE - kernel_array_size) - hfs + image_address1;
+            if (address1 < 0)address1 += size1;
+            else if (address1 > size1)address1 -= size1;
+            cached[image_address0 * PATCH_SIZE + image_address1] = img[image_index * size0 * size1 + address0 * size1 + address1];
 
         }
     }
-    for(int imaddr0=hfs;imaddr0<PATCH_SIZE-hfs;imaddr0++)
+    for(int image_address0 = hfs; image_address0 < PATCH_SIZE - hfs; image_address0++)
     {
-        for(int imaddr1=hfs;imaddr1<PATCH_SIZE-hfs;imaddr1++)
+        for(int image_address1 = hfs; image_address1 < PATCH_SIZE - hfs; image_address1++)
         {
-            if((imaddr0+gid0*(PATCH_SIZE-krnsz)-hfs)<sz0&&(imaddr1+gid1*(PATCH_SIZE-krnsz)-hfs)<sz1)
+            if ((image_address0 + gid0 * (PATCH_SIZE - kernel_array_size) - hfs) < size0
+                && (image_address1 + gid1 * (PATCH_SIZE - kernel_array_size) - hfs) < size1)
             {
-                sum=(convolution_kernel_t)(0);
-                for(int i=-hfs;i<hfs; i++)
+                sum = (convolution_kernel_t)(0);
+                for(int i = -hfs; i < hfs; i++)
                 {
-                    for(int j=-hfs;j<hfs; j++)
+                    for(int j = -hfs; j < hfs; j++)
                     {
-                        addr0=imaddr0+i;
-                        addr1=imaddr1+j;
-                        tmp=cached[addr0*PATCH_SIZE+addr1]*krn[(i+hfs)*krnsz+j+hfs];
-                        sum=sum+tmp;
+                        address0 = image_address0 + i;
+                        address1 = image_address1 + j;
+                        tmp = cached[address0 * PATCH_SIZE + address1] * kernel_array[(i + hfs) * kernel_array_size + j + hfs];
+                        sum = sum + tmp;
                     }
                 }
-                res[iimg*sz0*sz1+(imaddr0+gid0*(PATCH_SIZE-krnsz)-hfs)*sz1+(imaddr1+gid1*(PATCH_SIZE-krnsz)-hfs)]=sum;
+                res[image_index * size0 * size1 + (image_address0 + gid0 * (PATCH_SIZE - kernel_array_size) - hfs) * size1 +
+                    (image_address1 + gid1 * (PATCH_SIZE - kernel_array_size) - hfs)] = sum;
             }
         }
     }
