@@ -6,20 +6,9 @@
 #define IMAGE_TYPE uchar
 #endif
 
-#ifndef KERNEL_DATA_TYPE
-#define KERNEL_DATA_TYPE float
+#ifndef KERNEL_TYPE
+#define KERNEL_TYPE float16
 #endif
-
-#ifndef KERNEL_VEC_SIZE
-#define KERNEL_VEC_SIZE
-#endif
-
-#define DATA_TYPE_(type, size) type##size
-#define DATA_TYPE(type, size) DATA_TYPE_(type, size)
-#define stringize(t) #t
-#define print_macro(t) stringize(t)
-
-#define KERNEL_TYPE DATA_TYPE(KERNEL_DATA_TYPE, KERNEL_VEC_SIZE)
 
 typedef KERNEL_TYPE convolution_kernel_t;
 typedef IMAGE_TYPE input_t;
